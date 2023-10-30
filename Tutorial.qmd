@@ -1,0 +1,106 @@
+---
+title: "Tutorial"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(dygraphs)
+library(tidyverse)
+library(tidyquant)
+library(fpp3)
+```
+
+```{r}
+#Data preparation
+vic_elec_daily <- vic_elec %>%
+  filter(year(Time) == 2014) %>%
+  index_by(Date = date(Time)) %>%
+  summarise(
+    Demand = sum(Demand)/1e3,
+    Temperature = max(Temperature)
+  )
+```
+
+```{r}
+head(vic_elec_daily)
+```
+
+```{r}
+dygraph(vic_elec_daily)
+```
+
+```{r}
+dygraph(vic_elec_daily) %>%
+  dyOptions(fillGraph=TRUE, fillAlpha=0.2, drawGrid = FALSE) %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 4, highlightSeriesBackgroundAlpha = 0.5, hideOnMouseOut = TRUE)  %>%
+  dyRoller(rollPeriod = 1)
+```
+
+```{r}
+dygraph(vic_elec_daily) %>%
+  dyOptions(fillGraph=TRUE, fillAlpha=0.1, drawGrid = FALSE) %>%
+  dyAxis("y", label = "Temperature") %>%
+  dySeries("Demand",axis = "y2") %>%
+  dyAxis("y2", label = "Electricity Demand", independentTicks = TRUE) %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 4, highlightSeriesBackgroundAlpha = 0.5, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)
+```
+
+```{r}
+demand_daily <- select(vic_elec_daily,Date,Demand) 
+```
+
+```{r}
+#fitting an ARIMA model to the Electricity Demand
+fit <- demand_daily %>%
+  model(ARIMA(Demand))
+```
+
+```{r}
+#forecasts
+fc <- fit %>%
+  forecast(h=50) %>%
+  hilo(level=c(80,95)) %>%
+  mutate(forecasts = .mean,
+         upr80 = `80%`$upper,
+         lwr80 = `80%`$lower,
+         upr95 = `95%`$upper,
+         lwr95 = `95%`$lower) %>%
+  select(Date,forecasts,upr80,lwr80,upr95,lwr95)
+
+fc
+```
+
+```{r}
+bind_rows(demand_daily,fc) %>%
+  dygraph() %>%
+  dySeries("Demand",label = "Demand",color="darkgreen") %>%
+  dySeries("forecasts",label = "Predicted",color="#2166AC") %>%
+  dySeries("lwr95",color="#92C5DE") %>%
+  dySeries("upr95",color="#92C5DE") %>%
+  dySeries("lwr80",color="#4393C3") %>%
+  dySeries("upr80",color="#4393C3") %>%
+  dyRangeSelector()
+```
+
+```{r}
+bind_rows(demand_daily,fc) %>%
+  dygraph() %>%
+  dySeries("Demand",label = "Demand",color='darkgreen') %>%
+  dySeries(c("lwr80","forecasts","upr80"),label="Predicted",color="blue") %>%
+  dySeries(c("lwr95","forecasts","upr95"),label="Predicted",color="blue") %>%
+  dyRangeSelector()
+```
+
+```{r}
+fc <- fit %>%
+  forecast(h=50) %>%
+  hilo(level=c(80,95))
+
+fc
+```
