@@ -96,11 +96,3 @@ bind_rows(demand_daily,fc) %>%
   dySeries(c("lwr95","forecasts","upr95"),label="Predicted",color="blue") %>%
   dyRangeSelector()
 ```
-
-```{r}
-fc <- fit %>%
-  forecast(h=50) %>%
-  hilo(level=c(80,95))
-
-fc
-```
